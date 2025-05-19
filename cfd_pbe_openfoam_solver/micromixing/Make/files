@@ -1,3 +1,0 @@
-envMixing.C
-
-LIB = $(FOAM_USER_LIBBIN)/libpisoMicromixing
