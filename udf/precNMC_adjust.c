@@ -70,37 +70,7 @@ double t0, t1, t2;
 #include "momentCalc.h"
 #include "interSuperSat.h"
 
-real old_timestep;
-real new_timestep;
-int n_timestep;
-int n_mydeltat;
 cxboolean firstdurFlag = 1;
-
-
-DEFINE_DELTAT(mydeltat, d)
-{
-    real time_step;
-    if (firstdurFlag == 1)
-    {
-        old_timestep = RP_Get_Real("timectrl/oldtimestep");
-        new_timestep = RP_Get_Real("timectrl/newtimestep");
-        n_timestep = RP_Get_Integer("timectrl/ntimestep");
-        firstdurFlag = 0;
-        n_mydeltat = 1;
-    }
-
-    time_step = (double)n_mydeltat / n_timestep * (new_timestep - old_timestep) + old_timestep;
-
-    if (n_mydeltat == n_timestep)
-    {
-        firstdurFlag = 1;
-    }
-
-    Message("the %d iterate,the timestep is %.5e\n ", n_mydeltat, time_step);
-    n_mydeltat++;
-    return time_step;
-
-}
 
 
 /*the function to initialize the global var ,UDMI ,UDS,and soon*/
@@ -174,7 +144,7 @@ DEFINE_EXECUTE_ON_LOADING(on_loading_precNMC, libname)
     }
 
     int n_UDS_req = N_UDS_C + N_UDS_E + 2 * N_NODES;
-    int n_UDM_req = startUDMIm + 4;
+    int n_UDM_req = startUDMIm + N_MOMENTS_OUTPUT;
 
     if (N_UDS < n_UDS_req || N_UDM < n_UDM_req)
     {
@@ -300,7 +270,7 @@ DEFINE_EXECUTE_ON_LOADING(on_loading_precNMC, libname)
 #if !RP_HOST
     Thread* t;
     cell_t c;
-    Domain* domain = Get_Domain(1);
+    Domain* domain = Get_Domain(1);/* 1 is target domain id */
 
     real V = 0;
 
@@ -318,7 +288,7 @@ DEFINE_EXECUTE_ON_LOADING(on_loading_precNMC, libname)
     }
 
     sum_V = PRF_GRSUM1(V);
-    oh_source = 0.005 * 0.9982 / 0.004 / 0.004 / 0.004 / 60.0;
+    oh_source = NaOH_RATE;
 
 #endif
 
@@ -354,7 +324,7 @@ DEFINE_EXECUTE_ON_LOADING(cal_Moment, libname)
                     {
                         moment += weights[j]*pow(nodes[j],i);
                     }
-                    C_UDMI(c, t, i+startUDMIm) = moment;
+                    C_UDMI(c, t, i+startUDMIm) = moment* REACT_ENV_P;
                 }
             }
         }
@@ -429,7 +399,7 @@ DEFINE_ADJUST(adjust, domain)
 
 
             double equilConc, totalConc, cationTotalConc, cationConcRatio, conc_Na;
-            double pH,superSat, /*superSat_N,*/ nuclRate, nuclSize, dm3dt,ddS;
+            double pH,superSat, nuclRate, nuclSize, dm3dt,ddS;
             double conc_OH, powConcs_NMC, k_sp_NMC;
             double epsilon, mu, rhoLiq, kappa, nu, reynolds_l, log10_re_l, c_phi, gamma,P4;
             
@@ -438,10 +408,6 @@ DEFINE_ADJUST(adjust, domain)
 
             cxboolean validConc, validMoment;
 
-
-            t0 = t1;
-            t1 = PREVIOUS_TIMESTEP;
-            t2 = CURRENT_TIMESTEP / 2;
 
             if (fristAdjustFlag == 0)
             {
@@ -723,17 +689,6 @@ DEFINE_ADJUST(adjust, domain)
 
                             }
 
-                            // without  use
-                            //double superSat_0, superSat_1, superSat_2;
-                            //superSat_N = superSat;
-                            //superSat_0 = C_UDMI(c, t, indexSuperSat);
-                            //superSat_1 = C_UDMI(c, t, indexSuperSat + 1);
-                            //superSat_2 = superSat;
-
-                            //interSuperSat(superSat_0, superSat_1, superSat, &superSat_N);
-
-                            //C_UDMI(c, t, indexSuperSat) = C_UDMI(c, t, indexSuperSat + 1);
-                            //C_UDMI(c, t, indexSuperSat + 1) = superSat;
 
 
                             if (superSat <= 1.0)
@@ -853,11 +808,11 @@ DEFINE_ADJUST(adjust, domain)
             ave_pH = sum_V_pH / sum_V;
 
 
-            if (ave_pH > max_pH) {
+            if (ave_pH > MAX_pH) {
                 oh_source =/* need to define */;
                 Message("feed is off\n");
             }
-            else if (ave_pH <min_pH)
+            else if (ave_pH <MIN_pH)
             {
                 oh_source =/* need to define */;
                 Message("feed is on\n");

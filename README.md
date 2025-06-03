@@ -1,2 +1,2 @@
-# wet-synthesis-route
-Computational models and codes for wet synthesis route, developed in the context of the SimDOME (GA: 814492)
+Expanding the model for the continuous synthesis of NCM cathode material precursors in a stirring tank
+original project link: https://github.com/mulmopro/wet-synthesis-route
